@@ -53,7 +53,7 @@ unimined.minecraft {
         if (use_access_transformer.toBoolean()) {
             accessTransformer "${rootProject.projectDir}/src/main/resources/$access_transformer_locations"
         }
-        loader "0.5.17-alpha"
+        loader providers.gradleProperty('cleanroom_version').getOrElse('0.5.17-alpha')
         runs.all {
             args += ['--username', minecraft_username]
             def extraArgs = extra_jvm_args
@@ -122,6 +122,7 @@ sourceSets {
 idea {
     module {
         inheritOutputDirs = true
+        excludeDirs += files('.setup', '.gradle-user-home')
     }
     project {
         settings {

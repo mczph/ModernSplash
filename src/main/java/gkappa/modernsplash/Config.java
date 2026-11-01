@@ -19,6 +19,7 @@ public class Config {
     public static boolean forgeLogo;
     public static boolean rotate;
     public static boolean mimicModern;
+    public static float uiScale = SplashScale.DEFAULT;
     public static int logoOffset;
     public static int backgroundColor;
     public static int fontColor;
@@ -54,6 +55,13 @@ public class Config {
         rotate = config.getBoolean("rotate", "splash", false, "Rotate the Forge logo");
         forgeLogo = config.getBoolean("forgeLogo", "splash", false, "Show the Forge logo");
         mimicModern = config.getBoolean("mimicModern", "splash", false, "Only show main progress bar and logo");
+        Property scaleProperty = config.get("splash", "uiScale", (double) SplashScale.DEFAULT,
+            "Multiplier for the window-adaptive loading screen scale: 1.0 = automatic size, "
+                + "0.5 = half automatic size, 2.0 = double automatic size. Scales the logo, bars and text "
+                + "independently of Minecraft GUI scale. Restart to apply changes to this multiplier.",
+            (double) SplashScale.MIN, (double) SplashScale.MAX);
+        uiScale = SplashScale.normalize((float) scaleProperty.getDouble(SplashScale.DEFAULT));
+        scaleProperty.setValue((double) uiScale);
         showMemory = config.getBoolean("showMemory", "splash", true, "Show the memory usage bar");
         showTotalMemoryLine = config
             .getBoolean("showTotalMemoryLine", "splash", false, "Show the total memory line on the memory bar");

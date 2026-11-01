@@ -79,6 +79,7 @@ public class CustomSplash {
     private static boolean forgeLogo;
     private static boolean rotate;
     private static boolean mimicModern;
+    private static float uiScale;
     private static int logoOffset;
     private static int backgroundColor;
     private static int fontColor;
@@ -117,6 +118,7 @@ public class CustomSplash {
         forgeLogo = Config.forgeLogo;
         rotate = Config.rotate;
         mimicModern = Config.mimicModern;
+        uiScale = Config.uiScale;
         logoOffset = Config.logoOffset;
         backgroundColor = Config.backgroundColor;
         fontColor = Config.fontColor;
@@ -214,27 +216,30 @@ public class CustomSplash {
                         }
                     }
 
-                    if (warningWarning != null && warningPrompt != null) {
-                        int w = Display.getWidth();
-                        int h = Display.getHeight();
-                        glClear(GL_COLOR_BUFFER_BIT);
-                        glViewport(0, 0, w, h);
-                        glMatrixMode(GL_PROJECTION);
-                        glLoadIdentity();
-                        glOrtho(320 - w / 2, 320 + w / 2, 240 + h / 2, 240 - h / 2, -1, 1);
-                        glMatrixMode(GL_MODELVIEW);
-                        glLoadIdentity();
+                    int w = Math.max(1, Display.getWidth());
+                    int h = Math.max(1, Display.getHeight());
+                    float scale = SplashScale.forWindow(w, h, uiScale);
+                    float halfWidth = SplashScale.halfExtent(w, scale);
+                    float halfHeight = SplashScale.halfExtent(h, scale);
+                    glClear(GL_COLOR_BUFFER_BIT);
+                    glViewport(0, 0, w, h);
+                    glMatrixMode(GL_PROJECTION);
+                    glLoadIdentity();
+                    glOrtho(320 - halfWidth, 320 + halfWidth, 240 + halfHeight, 240 - halfHeight, -1, 1);
+                    glMatrixMode(GL_MODELVIEW);
+                    glLoadIdentity();
 
+                    if (warningWarning != null && warningPrompt != null) {
                         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
                         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
                         dirtBackground.bind();
                         glEnable(GL_TEXTURE_2D);
-                        float left = 320 - (float) w / 2;
-                        float right = 320 + (float) w / 2;
-                        float top = 240 - (float) h / 2;
-                        float bottom = 240 + (float) h / 2;
-                        float us = (float) w / 64f;
-                        float vs = (float) h / 64f;
+                        float left = 320 - halfWidth;
+                        float right = 320 + halfWidth;
+                        float top = 240 - halfHeight;
+                        float bottom = 240 + halfHeight;
+                        float us = halfWidth / 32f;
+                        float vs = halfHeight / 32f;
                         glBegin(GL_QUADS);
                         glColor4f(0.25f, 0.25f, 0.25f, 1.0f);
                         glTexCoord2f(0, 0);
@@ -319,18 +324,6 @@ public class CustomSplash {
                             if (smoothProgressLast > 1.0f) smoothProgressLast = 1.0f;
                         }
 
-                        glClear(GL_COLOR_BUFFER_BIT);
-
-                        // matrix setup
-                        int w = Display.getWidth();
-                        int h = Display.getHeight();
-                        glViewport(0, 0, w, h);
-                        glMatrixMode(GL_PROJECTION);
-                        glLoadIdentity();
-                        glOrtho(320 - w / 2, 320 + w / 2, 240 + h / 2, 240 - h / 2, -1, 1);
-                        glMatrixMode(GL_MODELVIEW);
-                        glLoadIdentity();
-
                         // mojang logo
                         if (logoAlpha > 0.0f) {
                             setColorWithAlpha(logoColor, logoAlpha);
@@ -352,7 +345,7 @@ public class CustomSplash {
                         // memory usage
                         if (showMemory && !mimicModern) {
                             glPushMatrix();
-                            glTranslatef(320 - (float) barWidth / 2, 20, 0);
+                            glTranslatef(320 - (float) barWidth / 2, 240 - halfHeight + 20, 0);
                             drawMemoryBar(barAlpha);
                             glPopMatrix();
                         }
@@ -361,7 +354,7 @@ public class CustomSplash {
                         if (enableTimer && barAlpha > 0.0f && !mimicModern) {
                             glPushMatrix();
                             setColorWithAlpha(fontColor, barAlpha);
-                            glTranslatef(320 - (float) Display.getWidth() / 2 + 4, 240 + (float) Display.getHeight() / 2 - textHeight2, 0);
+                            glTranslatef(320 - halfWidth + 4, 240 + halfHeight - textHeight2, 0);
                             glScalef(2, 2, 1);
                             glEnable(GL_TEXTURE_2D);
                             String renderString = getString();
@@ -399,10 +392,10 @@ public class CustomSplash {
                             float fh = (float) forgeTexture.getHeight() / 2;
                             if (rotate) {
                                 float sh = Math.max(fw, fh);
-                                glTranslatef(320 + w / 2 - sh - logoOffset, 240 + h / 2 - sh - logoOffset, 0);
+                                glTranslatef(320 + halfWidth - sh - logoOffset, 240 + halfHeight - sh - logoOffset, 0);
                                 glRotatef(angle, 0, 0, 1);
                             } else {
-                                glTranslatef(320 + w / 2 - fw - logoOffset, 240 + h / 2 - fh - logoOffset, 0);
+                                glTranslatef(320 + halfWidth - fw - logoOffset, 240 + halfHeight - fh - logoOffset, 0);
                             }
                             int f = (angle / 5) % forgeTexture.getFrames();
                             glEnable(GL_TEXTURE_2D);

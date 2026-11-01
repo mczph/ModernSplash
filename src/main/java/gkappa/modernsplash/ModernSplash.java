@@ -162,10 +162,9 @@ public class ModernSplash {
 
         if (logoGlTextureName != 0) {
             int displayW = Display.getWidth();
-            int rawLogoSize = 512;
-            int logoSize = (int)(rawLogoSize * (double) width / displayW);
-            int logoX = (width - logoSize) / 2;
-            int logoY = (height - logoSize) / 2;
+            float logoSize = SplashScale.logoSize(width, displayW, Display.getHeight(), Config.uiScale);
+            float logoX = (width - logoSize) / 2.0f;
+            float logoY = (height - logoSize) / 2.0f;
             float r = ((Config.logoColor >> 16) & 0xFF) / 255.0f;
             float g = ((Config.logoColor >> 8) & 0xFF) / 255.0f;
             float b = (Config.logoColor & 0xFF) / 255.0f;
