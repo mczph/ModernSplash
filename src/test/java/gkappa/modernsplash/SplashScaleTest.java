@@ -10,6 +10,40 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SplashScaleTest {
     @Test
+    void tipsAndTimerHaveTheSameFontSizeAndBottomBaseline() {
+        for (int[] window : new int[][] { { 854, 480 }, { 2560, 1440 }, { 1920, 1080 },
+                { 381, 214 }, { 480, 854 }, { 3440, 1440 } }) {
+            for (float multiplier : new float[] { 0.25f, 0.75f, 1.0f, 2.0f, 4.0f }) {
+                int width = window[0];
+                int height = window[1];
+                float scale = SplashScale.forWindow(width, height, multiplier);
+                float legacyTipY = 240 + height / 2.0f - 20;
+                float viewportTop = 240 - height / 2.0f;
+                float tipBaselinePixels = SplashScale.overlayOffsetY(height, scale) + legacyTipY * scale - viewportTop;
+                float timerBaselinePixels = height - 20 * scale;
+                assertEquals(timerBaselinePixels, tipBaselinePixels, 0.002f);
+                float legacyTextHeight = 9 * 2;
+                float tipTop = SplashScale.overlayOffsetY(height, scale) + (legacyTipY - legacyTextHeight) * scale;
+                float tipBottom = SplashScale.overlayOffsetY(height, scale) + legacyTipY * scale;
+                assertEquals(legacyTextHeight * scale, tipBottom - tipTop, 0.002f);
+                // Scaling about the viewport center must keep centered tips centered.
+                assertEquals(320.0f, SplashScale.overlayOffsetX(scale) + 320 * scale, 0.001f);
+            }
+        }
+    }
+
+    @Test
+    void defaultScaleIsThreeQuartersAndCustomTitlesKeepTheirAspectRatio() {
+        assertEquals(0.75f, SplashScale.DEFAULT);
+        assertEquals(512.0f, SplashScale.imageWidth(300, 80, 512));
+        assertEquals(512.0f * 80 / 300, SplashScale.imageHeight(300, 80, 512));
+        assertEquals(512.0f * 80 / 300, SplashScale.imageWidth(80, 300, 512));
+        assertEquals(512.0f, SplashScale.imageHeight(80, 300, 512));
+        assertEquals(512.0f, SplashScale.imageWidth(1024, 1024, 512));
+        assertEquals(512.0f, SplashScale.imageHeight(1024, 1024, 512));
+    }
+
+    @Test
     void remappedForgeSplashCanLinkTheProjectionHelper() throws Throwable {
         var halfExtent = MethodHandles.publicLookup().findStatic(SplashScale.class, "halfExtent",
             MethodType.methodType(float.class, int.class, float.class));
@@ -22,7 +56,7 @@ class SplashScaleTest {
     @Test
     void invalidValuesCannotBreakTheProjection() {
         for (float value : new float[] { Float.NaN, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY }) {
-            assertEquals(1.0f, SplashScale.normalize(value));
+            assertEquals(0.75f, SplashScale.normalize(value));
             float scale = SplashScale.forWindow(854, 480, value);
             assertTrue(Float.isFinite(SplashScale.halfExtent(854, scale)));
         }

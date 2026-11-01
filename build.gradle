@@ -85,7 +85,10 @@ dependencies {
     }
     if (enable_junit_testing.toBoolean()) {
         testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
+        testImplementation 'org.ow2.asm:asm-commons:9.10.1'
+        testImplementation 'org.ow2.asm:asm-analysis:9.10.1'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+        testRuntimeOnly sourceSets.main.compileClasspath
     }
 }
 

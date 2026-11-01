@@ -40,6 +40,9 @@ public class ModernSplash {
     public static final long FADE_PHASE1 = 500L;
     public static final long FADE_PHASE2 = 500L;
     public static volatile int logoGlTextureName;
+    public static volatile float logoLogicalWidth = 512;
+    public static volatile float logoLogicalHeight = 512;
+    public static volatile float logoU0, logoV0, logoU1 = 1, logoV1 = 1;
 
     public static volatile boolean gameStarted = false;
 
@@ -163,8 +166,10 @@ public class ModernSplash {
         if (logoGlTextureName != 0) {
             int displayW = Display.getWidth();
             float logoSize = SplashScale.logoSize(width, displayW, Display.getHeight(), Config.uiScale);
-            float logoX = (width - logoSize) / 2.0f;
-            float logoY = (height - logoSize) / 2.0f;
+            float logoWidth = logoSize * logoLogicalWidth / 512;
+            float logoHeight = logoSize * logoLogicalHeight / 512;
+            float logoX = (width - logoWidth) / 2.0f;
+            float logoY = (height - logoHeight) / 2.0f;
             float r = ((Config.logoColor >> 16) & 0xFF) / 255.0f;
             float g = ((Config.logoColor >> 8) & 0xFF) / 255.0f;
             float b = (Config.logoColor & 0xFF) / 255.0f;
@@ -181,14 +186,14 @@ public class ModernSplash {
             GL11.glColor4f(r, g, b, alpha);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, logoGlTextureName);
             GL11.glBegin(GL11.GL_QUADS);
-            GL11.glTexCoord2f(0, 0);
+            GL11.glTexCoord2f(logoU0, logoV0);
             GL11.glVertex2f(logoX, logoY);
-            GL11.glTexCoord2f(0, 1);
-            GL11.glVertex2f(logoX, logoY + logoSize);
-            GL11.glTexCoord2f(1, 1);
-            GL11.glVertex2f(logoX + logoSize, logoY + logoSize);
-            GL11.glTexCoord2f(1, 0);
-            GL11.glVertex2f(logoX + logoSize, logoY);
+            GL11.glTexCoord2f(logoU0, logoV1);
+            GL11.glVertex2f(logoX, logoY + logoHeight);
+            GL11.glTexCoord2f(logoU1, logoV1);
+            GL11.glVertex2f(logoX + logoWidth, logoY + logoHeight);
+            GL11.glTexCoord2f(logoU1, logoV0);
+            GL11.glVertex2f(logoX + logoWidth, logoY);
             GL11.glEnd();
             GL11.glPopMatrix();
             GL11.glPopAttrib();

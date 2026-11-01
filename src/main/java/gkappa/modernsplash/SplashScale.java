@@ -2,7 +2,7 @@ package gkappa.modernsplash;
 
 /** Shared pixel-to-splash conversions for loading and the main-menu fade. */
 public final class SplashScale {
-    static final float DEFAULT = 1.0f;
+    static final float DEFAULT = 0.75f;
     static final float MIN = 0.25f;
     static final float MAX = 4.0f;
     private static final float REFERENCE_WIDTH = 854.0f;
@@ -24,6 +24,22 @@ public final class SplashScale {
 
     public static float halfExtent(int pixels, float scale) {
         return Math.max(1, pixels) / (2.0f * scale);
+    }
+
+    public static float overlayOffsetX(float scale) {
+        return 320 * (1 - scale);
+    }
+
+    public static float overlayOffsetY(int height, float scale) {
+        return (240 + Math.max(1, height) / 2.0f) * (1 - scale);
+    }
+
+    public static float imageWidth(int width, int height, float longestSide) {
+        return longestSide * width / Math.max(width, height);
+    }
+
+    public static float imageHeight(int width, int height, float longestSide) {
+        return longestSide * height / Math.max(width, height);
     }
 
     static float logoSize(int guiWidth, int displayWidth, int displayHeight, float uiScale) {

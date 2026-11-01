@@ -19,6 +19,7 @@ public class Config {
     public static boolean forgeLogo;
     public static boolean rotate;
     public static boolean mimicModern;
+    public static boolean swapBottomCorners;
     public static float uiScale = SplashScale.DEFAULT;
     public static int logoOffset;
     public static int backgroundColor;
@@ -37,10 +38,12 @@ public class Config {
 
     public static String fontTexture;
     public static String forgeTexture;
+    public static String logoTexture;
     public static String resourcePackPath;
 
     public static ResourceLocation fontLoc;
     public static ResourceLocation forgeLoc;
+    public static ResourceLocation logoLoc;
     public static File miscPackFile;
 
     public static void load() {
@@ -54,6 +57,8 @@ public class Config {
             && ((!FMLClientHandler.instance().hasOptifine()) || Launch.blackboard.containsKey("optifine.ForgeSplashCompatible"));
         rotate = config.getBoolean("rotate", "splash", false, "Rotate the Forge logo");
         forgeLogo = config.getBoolean("forgeLogo", "splash", false, "Show the Forge logo");
+        swapBottomCorners = config.getBoolean("swapBottomCorners", "splash", false,
+            "Swap the bottom corners: timer on the right, Forge logo on the left. Restart to apply.");
         mimicModern = config.getBoolean("mimicModern", "splash", false, "Only show main progress bar and logo");
         Property scaleProperty = config.get("splash", "uiScale", (double) SplashScale.DEFAULT,
             "Multiplier for the window-adaptive loading screen scale: 1.0 = automatic size, "
@@ -87,32 +92,32 @@ public class Config {
         int darkStartTime = config.getInt("darkStartTime", "splash", 2300, 0, 2359, "Dark mode start time (HHmm)");
         int darkEndTime = config.getInt("darkEndTime", "splash", 600, 0, 2359, "Dark mode end time (HHmm)");
 
-        int backgroundColorNight = getConfigColor(
+        int backgroundColorNight = getNightConfigColor(
             "backgroundDark",
-            0x202020,
+            DarkPalette.BACKGROUND, 0x202020,
             "Background color night mode (hex RRGGBB)");
-        int fontColorNight = getConfigColor("fontDark", 0x606060, "Font color night mode (hex RRGGBB)");
-        int logoColorNight = getConfigColor("logoDark", 0x999999, "Logo color night mode (hex RRGGBB)");
-        int barBorderColorNight = getConfigColor(
+        int fontColorNight = getNightConfigColor("fontDark", DarkPalette.FONT, 0x606060, "Font color night mode (hex RRGGBB)");
+        int logoColorNight = getNightConfigColor("logoDark", DarkPalette.LOGO, 0x999999, "Logo color night mode (hex RRGGBB)");
+        int barBorderColorNight = getNightConfigColor(
             "barBorderDark",
-            0x4E4E4E,
+            DarkPalette.BAR_BORDER, 0x4E4E4E,
             "Progress bar border color night mode (hex RRGGBB)");
-        int barColorNight = getConfigColor("barDark", 0x4E4E4E, "Progress bar fill color night mode (hex RRGGBB)");
-        int barBackgroundColorNight = getConfigColor(
+        int barColorNight = getNightConfigColor("barDark", DarkPalette.BAR, 0x4E4E4E, "Progress bar fill color night mode (hex RRGGBB)");
+        int barBackgroundColorNight = getNightConfigColor(
             "barBackgroundDark",
-            0x202020,
+            DarkPalette.BAR_BACKGROUND, 0x202020,
             "Progress bar background color night mode (hex RRGGBB)");
-        int memoryGoodColorNight = getConfigColor(
+        int memoryGoodColorNight = getNightConfigColor(
             "memoryGoodDark",
-            0x4E4E4E,
+            DarkPalette.MEMORY_GOOD, 0x4E4E4E,
             "Memory bar color night mode (good, hex RRGGBB)");
-        int memoryWarnColorNight = getConfigColor(
+        int memoryWarnColorNight = getNightConfigColor(
             "memoryWarnDark",
-            0x4E4E4E,
+            DarkPalette.MEMORY_WARN, 0x4E4E4E,
             "Memory bar color night mode (warn, hex RRGGBB)");
-        int memoryLowColorNight = getConfigColor(
+        int memoryLowColorNight = getNightConfigColor(
             "memoryLowDark",
-            0x4E4E4E,
+            DarkPalette.MEMORY_LOW, 0x4E4E4E,
             "Memory bar color night mode (low, hex RRGGBB)");
 
         if (darkModeOnly || (darkEndTime >= darkStartTime ? (now >= darkStartTime && now < darkEndTime)
@@ -131,11 +136,14 @@ public class Config {
         fontTexture = config
             .getString("fontTexture", "splash", "textures/font/ascii.png", "Font texture resource location");
         forgeTexture = config
-            .getString("forgeTexture", "splash", "fml:textures/gui/forge.png", "Forge logo texture resource location");
+            .getString("forgeTexture", "splash", "fml:textures/gui/forge.png", "Forge logo resource location (PNG, animated PNG strip or GIF)");
+        logoTexture = config.getString("logoTexture", "splash", "modernsplash:textures/gui/title/mojang.png",
+            "Title logo resource location (PNG or GIF). Its aspect ratio is preserved.");
         resourcePackPath = config.getString("resourcePackPath", "splash", "resources", "Resource pack directory path");
 
         fontLoc = new ResourceLocation(fontTexture);
         forgeLoc = new ResourceLocation(forgeTexture);
+        logoLoc = new ResourceLocation(logoTexture);
         miscPackFile = new File(Minecraft.getMinecraft().gameDir, resourcePackPath);
 
         config.save();
@@ -157,5 +165,13 @@ public class Config {
                 .toUpperCase(),
             comment);
         return Integer.decode(prop.getString());
+    }
+
+    private static int getNightConfigColor(String name, int def, int legacy, String comment) {
+        Property prop = config.get("splash", name, "0x" + Integer.toHexString(def).toUpperCase(), comment);
+        int configured = Integer.decode(prop.getString());
+        int upgraded = DarkPalette.upgradeLegacyColor(configured, legacy, def);
+        if (upgraded != configured) prop.setValue("0x" + Integer.toHexString(upgraded).toUpperCase());
+        return upgraded;
     }
 }

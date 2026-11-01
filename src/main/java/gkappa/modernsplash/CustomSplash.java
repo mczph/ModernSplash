@@ -28,7 +28,6 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.*;
 import net.minecraftforge.fml.common.ProgressManager.ProgressBar;
 import net.minecraftforge.fml.common.asm.FMLSanityChecker;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
@@ -40,9 +39,6 @@ import org.lwjgl.util.glu.GLU;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.stream.ImageInputStream;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -136,7 +132,8 @@ public class CustomSplash {
         if (!enabled) return;
 
         final ResourceLocation fontLoc = Config.fontLoc;
-        final ResourceLocation logoLoc = new ResourceLocation("modernsplash:textures/gui/title/mojang.png");
+        final ResourceLocation logoLoc = Config.logoLoc;
+        final ResourceLocation logoFallbackLoc = new ResourceLocation("modernsplash:textures/gui/title/mojang.png");
         final ResourceLocation forgeLoc = Config.forgeLoc;
         final ResourceLocation forgeFallbackLoc = new ResourceLocation("fml:textures/gui/forge.png");
 
@@ -184,6 +181,7 @@ public class CustomSplash {
             private final int barOffset = 45;
             private long updateTiming;
             private long framecount;
+            private long animationStart;
             private float smoothProgressFirst = 0.0f;
             private float smoothProgressPenult = 0.0f;
             private float smoothProgressLast = 0.0f;
@@ -192,19 +190,25 @@ public class CustomSplash {
             public void run() {
                 setGL();
                 fontTexture = new Texture(fontLoc, null);
-                logoTexture = new Texture(logoLoc, null, true);
+                logoTexture = new Texture(logoLoc, logoFallbackLoc, true, false);
                 ModernSplash.logoGlTextureName = logoTexture.getName();
+                ModernSplash.logoLogicalWidth = SplashScale.imageWidth(logoTexture.getWidth(), logoTexture.getHeight(), 512);
+                ModernSplash.logoLogicalHeight = SplashScale.imageHeight(logoTexture.getWidth(), logoTexture.getHeight(), 512);
                 forgeTexture = new Texture(forgeLoc, forgeFallbackLoc);
                 dirtBackground = new Texture(new ResourceLocation("textures/gui/options_background.png"), null, false);
                 glEnable(GL_TEXTURE_2D);
                 fontRenderer = new SplashFontRenderer();
                 glDisable(GL_TEXTURE_2D);
+                animationStart = System.nanoTime();
                 while (!done) {
                     framecount++;
 
+                    // NeoFontRender 0.8.0 injects FLOAD 3 before Display.update().
+                    // Keep fadeProgress (slots 1-2) and barAlpha (slot 3) first.
                     long fadeProgress = 0;
                     float barAlpha = 1.0f;
                     float logoAlpha = 1.0f;
+                    long elapsedMillis = (System.nanoTime() - animationStart) / 1000000;
                     if (ModernSplash.fadeOutStart > 0) {
                         fadeProgress = (System.nanoTime() - ModernSplash.fadeOutStart) / 1000000; // ms
                         if (fadeProgress < ModernSplash.FADE_PHASE1) {
@@ -326,18 +330,25 @@ public class CustomSplash {
 
                         // mojang logo
                         if (logoAlpha > 0.0f) {
+                            int logoFrame = logoTexture.frameAt(elapsedMillis);
+                            float logoWidth = ModernSplash.logoLogicalWidth;
+                            float logoHeight = ModernSplash.logoLogicalHeight;
+                            ModernSplash.logoU0 = logoTexture.getU(logoFrame, 0);
+                            ModernSplash.logoV0 = logoTexture.getV(logoFrame, 0);
+                            ModernSplash.logoU1 = logoTexture.getU(logoFrame, 1);
+                            ModernSplash.logoV1 = logoTexture.getV(logoFrame, 1);
                             setColorWithAlpha(logoColor, logoAlpha);
                             glEnable(GL_TEXTURE_2D);
                             logoTexture.bind();
                             glBegin(GL_QUADS);
-                            logoTexture.texCoord(0, 0, 0);
-                            glVertex2f(320 - 256, 240 - 256);
-                            logoTexture.texCoord(0, 0, 1);
-                            glVertex2f(320 - 256, 240 + 256);
-                            logoTexture.texCoord(0, 1, 1);
-                            glVertex2f(320 + 256, 240 + 256);
-                            logoTexture.texCoord(0, 1, 0);
-                            glVertex2f(320 + 256, 240 - 256);
+                            logoTexture.texCoord(logoFrame, 0, 0);
+                            glVertex2f(320 - logoWidth / 2, 240 - logoHeight / 2);
+                            logoTexture.texCoord(logoFrame, 0, 1);
+                            glVertex2f(320 - logoWidth / 2, 240 + logoHeight / 2);
+                            logoTexture.texCoord(logoFrame, 1, 1);
+                            glVertex2f(320 + logoWidth / 2, 240 + logoHeight / 2);
+                            logoTexture.texCoord(logoFrame, 1, 0);
+                            glVertex2f(320 + logoWidth / 2, 240 - logoHeight / 2);
                             glEnd();
                             glDisable(GL_TEXTURE_2D);
                         }
@@ -352,12 +363,13 @@ public class CustomSplash {
 
                         // timer
                         if (enableTimer && barAlpha > 0.0f && !mimicModern) {
+                            String renderString = getString();
                             glPushMatrix();
                             setColorWithAlpha(fontColor, barAlpha);
-                            glTranslatef(320 - halfWidth + 4, 240 + halfHeight - textHeight2, 0);
+                            glTranslatef(SplashLayout.timerX(halfWidth, fontRenderer.getStringWidth(renderString) * 2,
+                                Config.swapBottomCorners), 240 + halfHeight - textHeight2, 0);
                             glScalef(2, 2, 1);
                             glEnable(GL_TEXTURE_2D);
-                            String renderString = getString();
                             fontRenderer.drawString(renderString, 0, 0, 0x000000);
                             glDisable(GL_TEXTURE_2D);
                             glPopMatrix();
@@ -384,20 +396,22 @@ public class CustomSplash {
 
                         if (forgeLogo && barAlpha > 0.0f && !mimicModern) {
 
-                            angle += 1;
+                            angle = (angle + 1) % 360;
 
                             // forge logo
                             setColorWithAlpha(0xFFFFFF, barAlpha);
                             float fw = (float) forgeTexture.getWidth() / 2;
                             float fh = (float) forgeTexture.getHeight() / 2;
                             if (rotate) {
-                                float sh = Math.max(fw, fh);
-                                glTranslatef(320 + halfWidth - sh - logoOffset, 240 + halfHeight - sh - logoOffset, 0);
+                                float sh = (float) Math.hypot(fw, fh);
+                                glTranslatef(SplashLayout.forgeX(halfWidth, sh, logoOffset, Config.swapBottomCorners),
+                                    240 + halfHeight - sh - logoOffset, 0);
                                 glRotatef(angle, 0, 0, 1);
                             } else {
-                                glTranslatef(320 + halfWidth - fw - logoOffset, 240 + halfHeight - fh - logoOffset, 0);
+                                glTranslatef(SplashLayout.forgeX(halfWidth, fw, logoOffset, Config.swapBottomCorners),
+                                    240 + halfHeight - fh - logoOffset, 0);
                             }
-                            int f = (angle / 5) % forgeTexture.getFrames();
+                            int f = forgeTexture.frameAt(elapsedMillis);
                             glEnable(GL_TEXTURE_2D);
                             forgeTexture.bind();
                             glBegin(GL_QUADS);
@@ -413,6 +427,10 @@ public class CustomSplash {
                             glDisable(GL_TEXTURE_2D);
                         }
                     }
+
+                    // Legacy overlays injected before Display.update() use physical pixel coordinates.
+                    // Give them a neutral, bottom-centered adaptive transform instead of the Forge icon's transform.
+                    prepareOverlays(w, h);
 
                     // We use mutex to indicate safely to the main thread that we're taking the display global lock
                     // So the main thread can skip processing messages while we're updating.
@@ -476,6 +494,17 @@ public class CustomSplash {
                 }
 
                 return str;
+            }
+
+            private void prepareOverlays(int width, int height) {
+                glMatrixMode(GL_PROJECTION);
+                glLoadIdentity();
+                glOrtho(320 - width / 2.0, 320 + width / 2.0, 240 + height / 2.0, 240 - height / 2.0, -1, 1);
+                glMatrixMode(GL_MODELVIEW);
+                glLoadIdentity();
+                float scale = SplashScale.forWindow(width, height, uiScale);
+                glTranslatef(SplashScale.overlayOffsetX(scale), SplashScale.overlayOffsetY(height, scale), 0);
+                glScalef(scale, scale, 1);
             }
 
             private void setColor(int color) {
@@ -805,43 +834,37 @@ public class CustomSplash {
         private final int height;
         private final int frames;
         private final int size;
+        private final SplashImage animation;
 
         public Texture(ResourceLocation location, @Nullable ResourceLocation fallback) {
             this(location, fallback, true);
         }
 
         public Texture(ResourceLocation location, @Nullable ResourceLocation fallback, boolean allowRP) {
-            InputStream s = null;
+            this(location, fallback, allowRP, true);
+        }
+
+        public Texture(ResourceLocation location, @Nullable ResourceLocation fallback, boolean allowRP, boolean allowStrip) {
             try {
                 this.location = location;
-                s = open(location, fallback, allowRP);
-                ImageInputStream stream = ImageIO.createImageInputStream(s);
-                Iterator<ImageReader> readers = ImageIO.getImageReaders(stream);
-                if (!readers.hasNext()) throw new IOException("No suitable reader found for image" + location);
-                ImageReader reader = readers.next();
-                reader.setInput(stream);
-                int frames = reader.getNumImages(true);
-                BufferedImage[] images = new BufferedImage[frames];
-                for (int i = 0; i < frames; i++) {
-                    images[i] = reader.read(i);
+                SplashImage image;
+                try {
+                    image = load(location, allowRP, allowStrip);
+                } catch (IOException error) {
+                    if (fallback == null || fallback.equals(location)) throw error;
+                    FMLLog.log.warn("Could not load splash texture {}; using {}", location, fallback, error);
+                    image = load(fallback, true, allowStrip);
                 }
-                reader.dispose();
-                width = images[0].getWidth();
-                int height = images[0].getHeight();
-                // Animation strip
-                if (height > width && height % width == 0) {
-                    frames = height / width;
-                    BufferedImage original = images[0];
-                    height = width;
-                    images = new BufferedImage[frames];
-                    for (int i = 0; i < frames; i++) {
-                        images[i] = original.getSubimage(0, i * height, width, height);
-                    }
-                }
-                this.frames = frames;
-                this.height = height;
+                animation = image;
+                width = image.width();
+                height = image.height();
+                frames = image.frameCount();
+                if ((long) width * height > buf.capacity()) throw new IOException("Splash texture frame is too large");
                 int size = 1;
-                while ((size / width) * (size / height) < frames) size *= 2;
+                while ((long) (size / width) * (size / height) < frames) {
+                    if (size >= getMaxTextureSize()) throw new IOException("Splash texture atlas is too large");
+                    size *= 2;
+                }
                 this.size = size;
                 glEnable(GL_TEXTURE_2D);
                 synchronized (CustomSplash.class) {
@@ -855,10 +878,10 @@ public class CustomSplash {
                 for (int i = 0; i * (size / width) < frames; i++) {
                     for (int j = 0; i * (size / width) + j < frames && j < size / width; j++) {
                         buf.clear();
-                        BufferedImage image = images[i * (size / width) + j];
+                        BufferedImage frame = animation.frame(i * (size / width) + j);
                         for (int k = 0; k < height; k++) {
                             for (int l = 0; l < width; l++) {
-                                buf.put(image.getRGB(l, k));
+                                buf.put(frame.getRGB(l, k));
                             }
                         }
                         buf.position(0).limit(width * height);
@@ -871,9 +894,17 @@ public class CustomSplash {
             } catch (IOException e) {
                 FMLLog.log.error("Error reading texture from file: {}", location, e);
                 throw new RuntimeException(e);
-            } finally {
-                IOUtils.closeQuietly(s);
             }
+        }
+
+        private static SplashImage load(ResourceLocation location, boolean allowRP, boolean allowStrip) throws IOException {
+            try (InputStream input = open(location, null, allowRP)) {
+                return SplashImage.read(input, allowStrip);
+            }
+        }
+
+        public int frameAt(long elapsedMillis) {
+            return animation.frameAt(elapsedMillis);
         }
 
         public ResourceLocation getLocation() {
