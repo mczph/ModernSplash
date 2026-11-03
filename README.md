@@ -1,141 +1,81 @@
-# ForgeTemplate
-Everything but the Java Classes are thanks and are credited to SizeableShrimps ForgeTemplates found [Here](https://github.com/SizableShrimp/ForgeTemplate/tree/1.12.x)
+# ModernSplash
 
-## Setting up
-* Open up `gradle.properties` and change all the necessary properties
-* Rename the main package to be the same as `mod_base_package` in the properties file, e.g. `io.github.examplemod`
+适用于 Minecraft 1.12.2 / Cleanroom Loader 的加载界面模组，支持窗口自适应、自定义图片和绿色荧光暗色主题。
 
-Finally, import into your IDE of choice.
+首次运行后，在游戏目录的 `config/modernsplash.cfg` 中修改配置，重启游戏生效。以下示例中的配置项都位于已有的 `splash { ... }` 内，修改对应项即可。
 
-## Loading screen size
+## 自定义标题 Logo
 
-The loading screen automatically scales to the current window size, using
-854 x 480 as the reference size and preserving the aspect ratio. The scale is
-recomputed every frame, so resizing the window during loading takes effect
-immediately. The smaller of the width and height ratios determines the scale.
-This recalculation only uses scalar arithmetic and does not allocate objects or
-reload textures.
-
-`uiScale` is an additional multiplier for this automatic size. Edit
-`config/modernsplash.cfg` after the first launch, then restart Minecraft:
+1. 准备一张 PNG 图片或 GIF 动图，推荐使用透明背景。
+2. 在游戏目录中创建 `resources/assets/custom/textures/`，将图片放进去，例如 `title.png`。
+3. 修改配置：
 
 ```text
 splash {
-    D:uiScale=0.75
+    S:logoTexture=custom:textures/title.png
 }
 ```
 
-The final scale is `min(windowWidth / 854, windowHeight / 480) * uiScale`.
-It scales the loading logo, progress bars, memory bar, timer and warning text
-together, independently of Minecraft's GUI scale. The default multiplier is
-`0.75`. `1.0` uses the automatic size,
-`0.5` halves it and `2.0` doubles it. The multiplier range is `0.25` to `4.0`;
-non-finite values fall back to `0.75`. Existing configuration values are preserved.
-Multipliers above `1.0` can crop content.
-For example, a 1708 x 960 window uses a final scale of `2.0` with `uiScale=1.0`,
-or `1.5` with `uiScale=0.75`. The timer and
-Forge logo stay anchored to their corners, and the memory bar stays near the top.
-The logo keeps the same size when fading into the main menu.
+重启后，你的图片会完整替换加载界面中央的 Mojang Logo，保留图片本身的颜色、透明度和宽高比例。使用 GIF 时，将文件名和配置中的扩展名都改为 `.gif`，动图会循环播放。以后替换同一路径的图片并重启即可更新。
 
-The game window size and the main menu GUI scale are unchanged.
+自定义图片不受 `logo` / `logoDark` 影响，即使旧配置为黑色，也会按图片原色显示。进入主菜单时的淡出效果使用同一张图片。
 
-## Custom title and Forge images
+内置 Logo 的日间默认保持红色背景（`0xEF323D`）和白色 Logo，夜间使用深绿背景和白色 Logo。`logo` 和 `logoDark` 分别控制内置 Logo 的日间、夜间染色，默认均为白色 `0xFFFFFF`。已有自定义配色会保留。
 
-Add images under the directory selected by `resourcePackPath` (default:
-`resources` in the game directory). For example:
+默认标题路径为 `modernsplash:textures/gui/title/mojang.png`，改回该值可恢复内置图片。自定义图片缺失或无法读取时，也会使用内置图片。
 
-```text
-resources/
-  assets/
-    custom/
-      textures/
-        title.png
-        forge.gif
-```
+上面的路径以游戏实际运行目录为准，使用版本隔离时通常是该版本的文件夹。若修改了 `resourcePackPath`，请将图片放到该目录下的 `assets/custom/textures/`。
 
-Then set the following in the `splash` section of `config/modernsplash.cfg`:
+## 自定义 Forge 图标
+
+将图片放入同一个文件夹，例如 `resources/assets/custom/textures/forge.gif`，然后修改：
 
 ```text
 splash {
-    D:uiScale=0.75
-    S:logoTexture=custom:textures/title.png
     B:forgeLogo=true
     S:forgeTexture=custom:textures/forge.gif
-    B:rotate=false
-    B:swapBottomCorners=true
     B:mimicModern=false
+    B:rotate=false
 }
 ```
 
-In the development client the files belong in `run/client/resources/assets/custom/textures/`.
-The title defaults to `modernsplash:textures/gui/title/mojang.png`; its aspect ratio
-is preserved within the original logo box, including during the main-menu fade.
-The title is tinted by the existing `logoColor` setting (and `logoDark` at night).
-Use white if the original image colors should be retained. PNG and GIF are
-supported for both images. Missing or unreadable custom files fall back to the
-built-in image.
+支持 PNG 和 GIF，也兼容旧式竖向 PNG 帧图。`rotate=true` 会让整个图标旋转；关闭旋转仍会播放 GIF。图标按图片原色显示。
 
-GIFs loop using their individual frame delays, with transparent and partial
-frames composited before upload. A zero-delay frame uses 100 ms. Legacy vertical
-PNG strips remain supported for the Forge icon, at 50 ms per square frame; tall
-title PNGs are displayed as a single image. Decoding and texture upload happen
-once at startup. During the short main-menu fade the title keeps its last frame.
+## 界面大小与位置
 
-`rotate=true` rotates the entire Forge image around its center. GIF playback is
-independent of this setting: `rotate=false` still plays the animation. Rotation
-only appears when `forgeLogo=true` and `mimicModern=false`.
+界面自动跟随窗口大小调整，`uiScale` 在此基础上控制整体缩放，独立于 Minecraft 的 GUI 大小设置：
 
-## Swapping the bottom corners
-
-`swapBottomCorners=false` (default) places the timer at bottom left and the Forge
-icon at bottom right. `swapBottomCorners=true` swaps them: timer at bottom right,
-Forge icon at bottom left. `logoOffset` still controls the Forge icon's edge
-padding. This affects the loading timer; the startup-time text on the main menu
-retains its existing position. Restart after changing these settings.
-
-## Neon green dark mode
-
-Dark mode uses a near-black green background, mint-green text, a separately
-configurable logo tint and bright phosphor-green progress bars. Memory warnings change to lime
-and amber so they remain distinguishable.
-
-| Setting | Default |
-| --- | --- |
-| `backgroundDark` | `0x06110C` |
-| `fontDark` | `0xB9FFD5` |
-| `logoDark` | `0x000000` |
-| `barBorderDark` | `0x2CFF88` |
-| `barDark` | `0x39FF88` |
-| `barBackgroundDark` | `0x0B2518` |
-| `memoryGoodDark` | `0x39FF88` |
-| `memoryWarnDark` | `0xD5FF45` |
-| `memoryLowDark` | `0xFFBE55` |
-
-Old gray defaults upgrade automatically on the next launch; other custom colors
-are preserved. `darkModeOnly=true` enables this palette all day, while the existing
-`darkStartTime` and `darkEndTime` settings select the scheduled mode.
-
-NeoFontRender loading tips use their original pixel coordinate system. The splash
-restores that projection and resets the model-view before third-party overlays.
-A transform anchored to the bottom center applies the same adaptive scale and
-`uiScale` multiplier as the timer, keeping their font sizes and bottom baseline
-aligned. Tips remain visible in large windows and are unaffected by Forge logo rotation.
-
-## Cleanroom 0.6.13 development
-
-NeoFontRender 0.8.0 patches the splash rendering thread using a fixed local
-variable slot for the progress-bar opacity. The rendering loop preserves this
-layout so its loading tips remain compatible with the animation clock.
-`NeoFontRenderCompatTest` checks that slot and can also run the actual installed
-transformer when `NEOFONT_COMPAT_JAR` points to its jar.
-
-Use JDK 25 and the Gradle Wrapper. The loader version can be overridden without
-changing the upstream default:
-
-```shell
-./gradlew build -Pcleanroom_version=0.6.13-alpha
-./gradlew runClient -Pcleanroom_version=0.6.13-alpha
+```text
+splash {
+    D:uiScale=0.75
+    B:swapBottomCorners=false
+}
 ```
 
-In PowerShell, quote the property argument:
-`./gradlew.bat build '-Pcleanroom_version=0.6.13-alpha'`.
+- `uiScale`：默认 `0.75`，可设为 `0.25`～`4.0`；数值越大，图片、进度条和文字越大，过大可能超出窗口。
+- `swapBottomCorners=false`：计时器在左下角，Forge 图标在右下角；改为 `true` 交换位置。
+- `logoOffset`：调整 Forge 图标到窗口边缘的距离。
+
+NeoFontRender 提示与计时器使用一致的字体大小，并随界面一起缩放。
+
+## 暗色主题
+
+暗色模式使用深绿背景和荧光绿进度条，Logo 默认保留图片原色。
+
+- `darkModeOnly=true`：全天启用暗色模式。
+- `darkStartTime` / `darkEndTime`：设置启用时段，格式为 `HHmm`，例如 `2300` 表示 23:00。
+- `backgroundDark`、`fontDark`、`barDark` 等选项可分别调整背景、文字和进度条颜色。
+
+## 开发构建
+
+使用 JDK 25，在项目目录运行：
+
+```powershell
+./gradlew.bat build '-Pcleanroom_version=0.6.13-alpha'
+```
+
+构建产物位于 `build/libs/`，游戏使用不带 `-dev` 或 `-sources` 后缀的 JAR。开发客户端的自定义图片放在 `run/client/resources/assets/custom/textures/`。
+
+## 致谢
+
+项目构建模板基于 [SizableShrimp 的 ForgeTemplate](https://github.com/SizableShrimp/ForgeTemplate/tree/1.12.x)。

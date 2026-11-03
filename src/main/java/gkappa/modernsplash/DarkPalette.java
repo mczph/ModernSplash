@@ -4,7 +4,7 @@ package gkappa.modernsplash;
 final class DarkPalette {
     static final int BACKGROUND = 0x06110C;
     static final int FONT = 0xB9FFD5;
-    static final int LOGO = 0x000000;
+    static final int LOGO = 0xFFFFFF;
     static final int BAR_BORDER = 0x2CFF88;
     static final int BAR = 0x39FF88;
     static final int BAR_BACKGROUND = 0x0B2518;

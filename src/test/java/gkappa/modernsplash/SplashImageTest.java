@@ -72,6 +72,22 @@ class SplashImageTest {
     }
 
     @Test
+    void preservesReplacementTitleColorsAndTransparency() throws Exception {
+        BufferedImage source = new BufferedImage(3, 2, BufferedImage.TYPE_INT_ARGB);
+        int[] pixels = { 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0x8012AB34, 0x00123456, 0xFFFFFFFF };
+        source.setRGB(0, 0, 3, 2, pixels, 0, 3);
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        ImageIO.write(source, "png", bytes);
+        SplashImage title = SplashImage.read(new ByteArrayInputStream(bytes.toByteArray()), false);
+        assertEquals(3, title.width());
+        assertEquals(2, title.height());
+        assertEquals(1, title.frameCount());
+        for (int i = 0; i < pixels.length; i++) {
+            assertEquals(pixels[i], title.frame(0).getRGB(i % 3, i / 3));
+        }
+    }
+
+    @Test
     void rejectsUnsupportedImageData() {
         assertThrows(java.io.IOException.class,
             () -> SplashImage.read(new ByteArrayInputStream(new byte[] { 1, 2, 3 }), true));

@@ -13,6 +13,8 @@ import java.time.format.DateTimeFormatter;
 
 public class Config {
 
+    public static final String DEFAULT_LOGO_TEXTURE = "modernsplash:textures/gui/title/mojang.png";
+
     private static Configuration config;
 
     public static boolean enabled;
@@ -78,7 +80,8 @@ public class Config {
 
         backgroundColor = getConfigColor("background", 0xEF323D, "Background color (hex RRGGBB)");
         fontColor = getConfigColor("font", 0xFFFFFF, "Font color (hex RRGGBB)");
-        logoColor = getConfigColor("logo", 0xFFFFFF, "Logo color (hex RRGGBB)");
+        logoColor = getConfigColor("logo", 0xFFFFFF,
+            "Built-in title image tint (hex RRGGBB). White preserves original colors. Custom title images ignore this setting.");
         barBorderColor = getConfigColor("barBorder", 0xFFFFFF, "Progress bar border color (hex RRGGBB)");
         barColor = getConfigColor("bar", 0xFFFFFF, "Progress bar fill color (hex RRGGBB)");
         barBackgroundColor = getConfigColor("barBackground", 0xEF323D, "Progress bar background color (hex RRGGBB)");
@@ -97,7 +100,8 @@ public class Config {
             DarkPalette.BACKGROUND, 0x202020,
             "Background color night mode (hex RRGGBB)");
         int fontColorNight = getNightConfigColor("fontDark", DarkPalette.FONT, 0x606060, "Font color night mode (hex RRGGBB)");
-        int logoColorNight = getNightConfigColor("logoDark", DarkPalette.LOGO, 0x999999, "Logo color night mode (hex RRGGBB)");
+        int logoColorNight = getNightConfigColor("logoDark", DarkPalette.LOGO, 0x999999,
+            "Built-in title image tint in dark mode (hex RRGGBB). White preserves original colors. Custom title images ignore this setting.");
         int barBorderColorNight = getNightConfigColor(
             "barBorderDark",
             DarkPalette.BAR_BORDER, 0x4E4E4E,
@@ -137,13 +141,15 @@ public class Config {
             .getString("fontTexture", "splash", "textures/font/ascii.png", "Font texture resource location");
         forgeTexture = config
             .getString("forgeTexture", "splash", "fml:textures/gui/forge.png", "Forge logo resource location (PNG, animated PNG strip or GIF)");
-        logoTexture = config.getString("logoTexture", "splash", "modernsplash:textures/gui/title/mojang.png",
-            "Title logo resource location (PNG or GIF). Its aspect ratio is preserved.");
+        logoTexture = config.getString("logoTexture", "splash", DEFAULT_LOGO_TEXTURE,
+            "Title image (PNG or GIF). Example: custom:textures/title.png for resources/assets/custom/textures/title.png. Restart to apply.");
         resourcePackPath = config.getString("resourcePackPath", "splash", "resources", "Resource pack directory path");
 
         fontLoc = new ResourceLocation(fontTexture);
         forgeLoc = new ResourceLocation(forgeTexture);
         logoLoc = new ResourceLocation(logoTexture);
+        // A replacement image supplies its own colors; old theme tints must not recolor it.
+        if (!logoLoc.equals(new ResourceLocation(DEFAULT_LOGO_TEXTURE))) logoColor = 0xFFFFFF;
         miscPackFile = new File(Minecraft.getMinecraft().gameDir, resourcePackPath);
 
         config.save();

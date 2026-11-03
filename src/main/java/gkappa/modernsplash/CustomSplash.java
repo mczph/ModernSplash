@@ -133,7 +133,7 @@ public class CustomSplash {
 
         final ResourceLocation fontLoc = Config.fontLoc;
         final ResourceLocation logoLoc = Config.logoLoc;
-        final ResourceLocation logoFallbackLoc = new ResourceLocation("modernsplash:textures/gui/title/mojang.png");
+        final ResourceLocation logoFallbackLoc = new ResourceLocation(Config.DEFAULT_LOGO_TEXTURE);
         final ResourceLocation forgeLoc = Config.forgeLoc;
         final ResourceLocation forgeFallbackLoc = new ResourceLocation("fml:textures/gui/forge.png");
 
